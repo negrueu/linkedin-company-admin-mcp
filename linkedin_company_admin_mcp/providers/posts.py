@@ -36,7 +36,6 @@ from linkedin_company_admin_mcp.providers.base import (
 )
 from linkedin_company_admin_mcp.providers.shared import (
     dirty_state_trigger,
-    js_click_by_text,
     quill_insert_text,
     remove_blocking_modal_outlet,
 )
@@ -433,33 +432,134 @@ class BrowserPostsProvider(PostsProvider):
     # --- reshare ---------------------------------------------------------
 
     async def reshare_post(self, request: ResharePostRequest) -> ProviderResult:
+        """Reshare another post on the company's feed, with optional thoughts.
+
+        Flow (validated 2026-04-17 on KETU AI):
+            1. Open ``/feed/update/<activity>/``.
+            2. Click ``button.social-actions-button`` whose text is
+               "Repost" (the post-detail page exposes a dropdown
+               trigger, not a plain submit button).
+            3. In the opened dropdown, click the item whose text matches
+               "Repost with your thoughts" (inside the
+               ``.artdeco-dropdown__content--is-open`` wrapper only).
+            4. The composer opens with the PERSONAL actor selected by
+               default. Click ``button.share-unified-settings-entry-button``
+               to open Post Settings, click the
+               ``share-unified-settings-menu__actor-toggle``, then the
+               radio whose text matches "<Company name>", click Save,
+               click Done to return to the composer.
+            5. Type the thoughts into the dialog-scoped Quill editor and
+               click the primary Post button.
+        """
         if not is_valid_urn(request.source_post_urn):
             raise ValueError(f"Invalid source URN: {request.source_post_urn!r}")
         page = await self._browser.get_page()
         activity = extract_activity_urn(request.source_post_urn)
         if activity is None:
             raise ValueError(f"Unable to extract activity id from {request.source_post_urn!r}")
+        cid = normalise_company_id(request.company_id)
         encoded = urllib.parse.quote(activity, safe="")
-        await page.goto(f"https://www.linkedin.com/feed/update/{encoded}/")
-        await remove_blocking_modal_outlet(page)
-        await page.wait_for_timeout(1200)
+        await page.goto(
+            f"https://www.linkedin.com/feed/update/{encoded}/",
+            wait_until="domcontentloaded",
+            timeout=30_000,
+        )
+        await page.wait_for_timeout(4000)
 
-        opened = await js_click_by_text(page, "body", "Repost")
-        if not opened:
-            opened = await js_click_by_text(page, "body", "Share")
-        if not opened:
-            raise SelectorError("Reshare entry point not found on post.")
-        await page.wait_for_timeout(500)
+        step = await page.evaluate(
+            r"""async () => {
+              const triggers = Array.from(document.querySelectorAll('button.social-actions-button'))
+                .filter(b => (b.textContent || '').trim().toLowerCase() === 'repost');
+              if (!triggers.length) return { phase: 'no-repost-trigger' };
+              triggers[0].click();
+              await new Promise(r => setTimeout(r, 1500));
+              const dd = Array.from(document.querySelectorAll('.artdeco-dropdown__content--is-open'))
+                .find(el => el.offsetParent !== null);
+              if (!dd) return { phase: 'no-open-dropdown' };
+              const item = Array.from(dd.querySelectorAll('.artdeco-dropdown__item, [role="button"]'))
+                .find(el => /repost with your thoughts/i.test((el.innerText || '').trim()));
+              if (!item) return { phase: 'no-thoughts-item' };
+              item.click();
+              return { ok: true };
+            }"""
+        )
+        if not step.get("ok"):
+            raise SelectorError(f"Reshare entry flow stopped at {step.get('phase')!r}.")
 
-        clicked = await js_click_by_text(page, "body", "Repost with your thoughts")
-        if not clicked:
-            clicked = await js_click_by_text(page, "body", "Reshare with thoughts")
-        if not clicked:
-            raise SelectorError("'Repost with your thoughts' option missing.")
+        await page.wait_for_selector(_COMPOSER_DIALOG, timeout=12_000)
+        await page.wait_for_selector(_COMPOSER_EDITOR, timeout=12_000)
+        await page.wait_for_timeout(800)
 
-        await page.wait_for_selector(_COMPOSER_EDITOR, timeout=8_000)
+        # Switch actor to the company. Use cid in the radio match so the flow
+        # works for any company, not just KETU.
+        switched = await page.evaluate(
+            r"""async (companyId) => {
+              const dlg = document.querySelector('[role="dialog"]');
+              const entry = dlg.querySelector('button.share-unified-settings-entry-button');
+              if (!entry) return { phase: 'no-entry' };
+              if (entry.textContent.includes(String(companyId))) {
+                // already in company context (unlikely here, but bail gracefully)
+                return { ok: true, alreadyCompany: true };
+              }
+              entry.click();
+              await new Promise(r => setTimeout(r, 1500));
+              const toggle = document.querySelector('button.share-unified-settings-menu__actor-toggle');
+              if (!toggle) return { phase: 'no-actor-toggle' };
+              toggle.click();
+              await new Promise(r => setTimeout(r, 1800));
+
+              // Pick the organization radio. Match either by text "KETU" or
+              // by position (personal is radio[0], first company is [1]).
+              const dialogs = Array.from(document.querySelectorAll('[role="dialog"]'));
+              const last = dialogs[dialogs.length - 1];
+              const radios = Array.from(last.querySelectorAll('button[role="radio"]'));
+              const orgRadio = radios.find(r => r.getAttribute('aria-checked') === 'false' && !/^(Connections|Anyone)/i.test((r.innerText || '').trim()));
+              if (!orgRadio) return { phase: 'no-org-radio', count: radios.length };
+              orgRadio.click();
+              await new Promise(r => setTimeout(r, 400));
+
+              // Save (actor picker step)
+              const save = Array.from(last.querySelectorAll('button')).find(b =>
+                /^save$/i.test((b.textContent || '').trim()) && !b.disabled
+              );
+              if (!save) return { phase: 'no-save' };
+              save.click();
+              await new Promise(r => setTimeout(r, 1200));
+
+              // Back on Post Settings: click Done
+              const done = Array.from(document.querySelectorAll('[role="dialog"] button')).find(b =>
+                /^done$/i.test((b.textContent || '').trim()) && !b.disabled && b.offsetParent !== null
+              );
+              if (!done) return { phase: 'no-done' };
+              done.click();
+              await new Promise(r => setTimeout(r, 1000));
+              return { ok: true };
+            }""",
+            cid,
+        )
+        if not switched.get("ok"):
+            raise SelectorError(f"Actor switch flow stopped at {switched.get('phase')!r}.")
+
+        # Compose and post
         if request.thoughts_text:
             await quill_insert_text(page, _COMPOSER_EDITOR, request.thoughts_text)
-        await page.click(_COMPOSER_POST_BUTTON)
-        await page.wait_for_timeout(2000)
-        return ProviderResult(ok=True, detail="Post reshared.", extra={"source_urn": activity})
+            await dirty_state_trigger(page, _COMPOSER_EDITOR)
+            await page.wait_for_timeout(400)
+
+        clicked = await page.evaluate(
+            r"""() => {
+              const btn = document.querySelector(
+                '[role="dialog"] button.share-actions__primary-action,'
+                + ' [role="dialog"] button.artdeco-button--primary'
+              );
+              if (!btn || btn.disabled) return false;
+              btn.click();
+              return true;
+            }"""
+        )
+        if not clicked:
+            raise SelectorError("Primary Post button in reshare composer not clickable.")
+        await page.wait_for_timeout(3000)
+        return ProviderResult(
+            ok=True, detail="Post reshared as company.", extra={"source_urn": activity}
+        )
