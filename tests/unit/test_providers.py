@@ -97,45 +97,58 @@ class TestRequestDataclasses:
         )
 
 
-class TestBrowserPostsProviderStubs:
-    """All 6 methods raise NotImplementedError until Faza 4."""
+class TestBrowserPostsProviderValidation:
+    """Pre-browser validation happens early enough to unit test."""
 
-    @pytest.mark.parametrize(
-        ("method_name", "request_obj"),
-        [
-            ("create_post", CreatePostRequest(company_id="1", text="t")),
-            (
-                "edit_post",
-                EditPostRequest(company_id="1", post_urn="urn:li:activity:1", new_text="t"),
-            ),
-            ("delete_post", DeletePostRequest(company_id="1", post_urn="urn:li:activity:1")),
-            (
-                "schedule_post",
-                SchedulePostRequest(
-                    company_id="1", text="t", scheduled_at_iso="2026-04-20T09:00:00Z"
-                ),
-            ),
-            (
-                "reply_to_comment",
-                ReplyCommentRequest(
-                    company_id="1",
-                    post_urn="urn:li:activity:1",
-                    comment_author_name="x",
-                    reply_text="y",
-                ),
-            ),
-            (
-                "reshare_post",
-                ResharePostRequest(company_id="1", source_post_urn="urn:li:activity:1"),
-            ),
-        ],
-    )
-    async def test_stub_raises(self, method_name: str, request_obj: object) -> None:
+    async def test_edit_post_rejects_invalid_urn(self) -> None:
         provider = BrowserPostsProvider(browser=None)  # type: ignore[arg-type]
-        method = getattr(provider, method_name)
-        assert inspect.iscoroutinefunction(method)
-        with pytest.raises(NotImplementedError):
-            await method(request_obj)
+        bad = EditPostRequest(company_id="1", post_urn="not-a-urn", new_text="x")
+        with pytest.raises(ValueError, match="Invalid post URN"):
+            await provider.edit_post(bad)
+
+    async def test_delete_post_rejects_invalid_urn(self) -> None:
+        provider = BrowserPostsProvider(browser=None)  # type: ignore[arg-type]
+        bad = DeletePostRequest(company_id="1", post_urn="garbage")
+        with pytest.raises(ValueError, match="Invalid post URN"):
+            await provider.delete_post(bad)
+
+    async def test_schedule_post_requires_iso_with_time(self) -> None:
+        provider = BrowserPostsProvider(browser=None)  # type: ignore[arg-type]
+        bad = SchedulePostRequest(company_id="1", text="t", scheduled_at_iso="2026-04-20")
+        with pytest.raises(ValueError, match="ISO 8601"):
+            await provider.schedule_post(bad)
+
+    async def test_reply_rejects_invalid_urn(self) -> None:
+        provider = BrowserPostsProvider(browser=None)  # type: ignore[arg-type]
+        bad = ReplyCommentRequest(
+            company_id="1",
+            post_urn="bad",
+            comment_author_name="x",
+            reply_text="y",
+        )
+        with pytest.raises(ValueError, match="Invalid post URN"):
+            await provider.reply_to_comment(bad)
+
+    async def test_reshare_rejects_invalid_urn(self) -> None:
+        provider = BrowserPostsProvider(browser=None)  # type: ignore[arg-type]
+        bad = ResharePostRequest(company_id="1", source_post_urn="nope")
+        with pytest.raises(ValueError, match="Invalid source URN"):
+            await provider.reshare_post(bad)
+
+
+def test_browser_posts_provider_implements_all_methods() -> None:
+    from linkedin_company_admin_mcp.providers.base import PostsProvider
+
+    assert issubclass(BrowserPostsProvider, PostsProvider)
+    for m in (
+        "create_post",
+        "edit_post",
+        "delete_post",
+        "schedule_post",
+        "reply_to_comment",
+        "reshare_post",
+    ):
+        assert inspect.iscoroutinefunction(getattr(BrowserPostsProvider, m))
 
 
 def test_browser_admin_provider_signatures() -> None:
