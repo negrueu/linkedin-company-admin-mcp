@@ -1,14 +1,23 @@
-"""Command-line entry point.
-
-This is a stub for Faza 0 (bootstrap). Real implementation lands in Faza 1.
-"""
+"""Command-line entry point."""
 
 from __future__ import annotations
 
 import argparse
+import asyncio
+import logging
 import sys
+from dataclasses import asdict
 
 from linkedin_company_admin_mcp import __version__
+from linkedin_company_admin_mcp.config.loaders import load_config
+from linkedin_company_admin_mcp.core.auth import SessionInfo, run_login, run_logout
+from linkedin_company_admin_mcp.core.exceptions import (
+    AuthenticationError,
+    ConfigurationError,
+)
+from linkedin_company_admin_mcp.logging_config import configure_logging
+
+_log = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -17,11 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="linkedin-company-admin-mcp",
         description="MCP server for LinkedIn Company Page administration.",
     )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"%(prog)s {__version__}",
-    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument(
         "--login",
         action="store_true",
@@ -37,27 +42,58 @@ def build_parser() -> argparse.ArgumentParser:
         "--transport",
         choices=["stdio", "streamable-http"],
         default=None,
-        help="MCP transport. Default: stdio (for Claude Desktop).",
+        help="MCP transport. Default (from env or 'stdio') used for Claude Desktop.",
     )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point. Returns process exit code."""
+    """Entry point. Returns a process exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if args.login or args.logout or args.transport:
-        print(
-            "Server runtime is not implemented yet (Faza 1). "
-            "Flags received: "
-            f"login={args.login}, logout={args.logout}, transport={args.transport}",
-            file=sys.stderr,
-        )
-        return 1
+    try:
+        config = load_config(args=args)
+    except ConfigurationError as e:
+        print(f"configuration error: {e}", file=sys.stderr)
+        return 2
 
-    print(
-        "linkedin-company-admin-mcp: bootstrap only. Run `--help` for options.",
-        file=sys.stderr,
-    )
+    configure_logging(config.server.log_level)
+
+    if args.logout:
+        info = run_logout(config.browser)
+        print(_format_session(info))
+        return 0
+
+    if args.login:
+        try:
+            info = asyncio.run(run_login(config.browser))
+        except AuthenticationError as e:
+            print(f"login failed: {e}", file=sys.stderr)
+            return 1
+        print(_format_session(info))
+        return 0 if info.logged_in else 1
+
+    from linkedin_company_admin_mcp.server import create_mcp_server
+
+    server = create_mcp_server(config)
+    transport = config.server.transport
+    _log.info("starting MCP server on transport=%s", transport)
+
+    if transport == "stdio":
+        server.run(transport="stdio", show_banner=False)
+    else:
+        server.run(
+            transport="streamable-http",
+            host=config.server.host,
+            port=config.server.port,
+            path=config.server.http_path,
+            show_banner=False,
+        )
     return 0
+
+
+def _format_session(info: SessionInfo) -> str:
+    import json
+
+    return json.dumps(asdict(info), indent=2)
