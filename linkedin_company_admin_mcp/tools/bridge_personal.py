@@ -33,26 +33,79 @@ _log = logging.getLogger(__name__)
 
 GetBrowser = Callable[[], BrowserManager]
 
-_COMPOSER_EDITOR = 'div.ql-editor, div[role="textbox"][contenteditable="true"]'
-_COMPOSER_POST_BUTTON = 'button[aria-label="Post"], button.share-actions__primary-action'
+# Scope to the share-box dialog so we never grab a comment editor on
+# the feed behind, or the hidden video.js error dialog that LinkedIn
+# ships on every page (aria-hidden="true").
+_COMPOSER_DIALOG = 'div.artdeco-modal.share-box-v2__modal, [role="dialog"]:has(.ql-editor)'
+_COMPOSER_EDITOR = 'div.artdeco-modal .ql-editor[role="textbox"], div.artdeco-modal div.ql-editor'
+_COMPOSER_POST_BUTTON = (
+    "div.artdeco-modal button.share-actions__primary-action,"
+    " div.artdeco-modal button.artdeco-button--primary"
+)
 
 
 async def _open_personal_composer(page: object) -> None:
-    """Land on /feed/ and open the Start-a-post composer."""
+    """Land on /feed/ and open the Start-a-post composer.
+
+    The ?share=true URL parameter no longer auto-opens the composer on
+    personal feed either. We find the trigger button and click it via
+    evaluate so LinkedIn's programmatic overlay doesn't block us.
+    """
     await page.goto(LINKEDIN_FEED_URL)  # type: ignore[attr-defined]
-    await remove_blocking_modal_outlet(page)  # type: ignore[arg-type]
-    opened = await js_click_by_text(page, "body", "Start a post")  # type: ignore[arg-type]
-    if not opened:
+    await page.wait_for_timeout(3000)  # type: ignore[attr-defined]
+    opened = await page.evaluate(  # type: ignore[attr-defined]
+        r"""async () => {
+          // LinkedIn renders the personal feed's composer trigger as a
+          // <div role="button"> whose inner text is "Start a post".
+          const clickables = Array.from(document.querySelectorAll(
+            'button, a, [role="button"]'
+          ));
+          const start = clickables.find(el =>
+            /^\s*start a post\s*$/i.test((el.textContent || '').trim())
+            || (el.getAttribute('aria-label') || '').toLowerCase().includes('start a post')
+          );
+          if (!start) return { found: false };
+          start.click();
+          await new Promise(r => setTimeout(r, 2500));
+          return { found: true, dialog: !!document.querySelector('[role="dialog"]') };
+        }"""
+    )
+    if not opened.get("found"):
         raise SelectorError("Could not locate 'Start a post' entry point on /feed/.")
-    await page.wait_for_selector(_COMPOSER_EDITOR, timeout=10_000)  # type: ignore[attr-defined]
+    # Wait for the share composer's editor to appear (which is enough to
+    # know the dialog is mounted - skipping wait_for_selector on the
+    # container avoids matching LinkedIn's hidden video.js error dialog).
+    await page.wait_for_selector(_COMPOSER_EDITOR, timeout=15_000)  # type: ignore[attr-defined]
+    await page.wait_for_timeout(600)  # type: ignore[attr-defined]
 
 
 async def _insert_company_mention(page: object, company_name: str) -> None:
-    """Type ``@<name>`` and click the first matching mention suggestion."""
+    """Type ``@<name>`` and click the first matching mention suggestion.
+
+    LinkedIn renders the mention typeahead as a floating ``[role="listbox"]``
+    or an ``artdeco-typeahead-results`` container. We match by case-
+    insensitive substring rather than a literal equality so the user can
+    pass "KETU AI" to match "KETU AI SRL".
+    """
     handle: str = f"@{company_name}"
-    await page.keyboard.type(handle)  # type: ignore[attr-defined]
-    await page.wait_for_timeout(1200)  # type: ignore[attr-defined]
-    clicked = await js_click_by_text(page, '[role="listbox"], .mentions-typeahead', company_name)  # type: ignore[arg-type]
+    await page.keyboard.type(handle, delay=20)  # type: ignore[attr-defined]
+    await page.wait_for_timeout(1500)  # type: ignore[attr-defined]
+    clicked = await page.evaluate(  # type: ignore[attr-defined]
+        r"""(needle) => {
+          const results = Array.from(document.querySelectorAll(
+            '[role="listbox"] [role="option"], '
+            + '.artdeco-typeahead-results [role="option"], '
+            + '.mentions-typeahead li, '
+            + '.mentions-typeahead button'
+          ));
+          const want = needle.toLowerCase();
+          const hit = results.find(el => (el.innerText || '').toLowerCase().includes(want));
+          if (!hit) return false;
+          hit.click();
+          return true;
+        }""",
+        company_name,
+    )
     if not clicked:
         raise SelectorError(f"Mention dropdown did not show a match for {company_name!r}.")
 
@@ -92,8 +145,22 @@ def register_bridge_personal_tools(mcp: FastMCP[None], *, get_browser: GetBrowse
             await _insert_company_mention(page, company_name)
             if trailing_text:
                 await quill_insert_text(page, _COMPOSER_EDITOR, " " + trailing_text)
-            await page.click(_COMPOSER_POST_BUTTON)
-            await page.wait_for_timeout(2500)
+            # Evaluate-click for robustness against Patchright's
+            # actionability check on the primary button overlay.
+            clicked = await page.evaluate(
+                r"""() => {
+                  const btn = document.querySelector(
+                    '[role="dialog"] button.share-actions__primary-action,'
+                    + ' [role="dialog"] button.artdeco-button--primary'
+                  );
+                  if (!btn || btn.disabled) return false;
+                  btn.click();
+                  return true;
+                }"""
+            )
+            if not clicked:
+                raise SelectorError("Personal composer Post button not clickable.")
+            await page.wait_for_timeout(3000)
             return {
                 "ok": True,
                 "detail": "Personal post with company mention published.",
@@ -131,25 +198,54 @@ def register_bridge_personal_tools(mcp: FastMCP[None], *, get_browser: GetBrowse
             await browser.start()
             page = await browser.get_page()
             encoded = urllib.parse.quote(activity, safe="")
-            await page.goto(f"{LINKEDIN_FEED_URL}update/{encoded}/")
-            await remove_blocking_modal_outlet(page)
-            await page.wait_for_timeout(1200)
+            await page.goto(
+                f"{LINKEDIN_FEED_URL}update/{encoded}/",
+                wait_until="domcontentloaded",
+                timeout=30_000,
+            )
+            await page.wait_for_timeout(4000)
 
-            opened = await js_click_by_text(page, "body", "Repost")
-            if not opened:
-                opened = await js_click_by_text(page, "body", "Share")
-            if not opened:
-                raise SelectorError("Repost entry point not found on post.")
-            clicked = await js_click_by_text(page, "body", "Repost with your thoughts")
-            if not clicked:
-                clicked = await js_click_by_text(page, "body", "Reshare with thoughts")
-            if not clicked:
-                raise SelectorError("'Repost with your thoughts' option missing.")
-            await page.wait_for_selector(_COMPOSER_EDITOR, timeout=8_000)
+            step = await page.evaluate(
+                r"""async () => {
+                  const triggers = Array.from(document.querySelectorAll('button.social-actions-button'))
+                    .filter(b => (b.textContent || '').trim().toLowerCase() === 'repost');
+                  if (!triggers.length) return { phase: 'no-repost-trigger' };
+                  triggers[0].click();
+                  await new Promise(r => setTimeout(r, 1500));
+                  const dd = Array.from(document.querySelectorAll('.artdeco-dropdown__content--is-open'))
+                    .find(el => el.offsetParent !== null);
+                  if (!dd) return { phase: 'no-open-dropdown' };
+                  const item = Array.from(dd.querySelectorAll('.artdeco-dropdown__item, [role="button"]'))
+                    .find(el => /repost with your thoughts/i.test((el.innerText || '').trim()));
+                  if (!item) return { phase: 'no-thoughts-item' };
+                  item.click();
+                  return { ok: true };
+                }"""
+            )
+            if not step.get("ok"):
+                raise SelectorError(f"Reshare flow stopped at {step.get('phase')!r}.")
+
+            await page.wait_for_selector(_COMPOSER_DIALOG, timeout=12_000)
+            await page.wait_for_selector(_COMPOSER_EDITOR, timeout=12_000)
+            await page.wait_for_timeout(600)
+            # Personal reshare uses the default actor (signed-in user), no
+            # actor switch needed. Type thoughts and hit Post.
             if thoughts_text:
                 await quill_insert_text(page, _COMPOSER_EDITOR, thoughts_text)
-            await page.click(_COMPOSER_POST_BUTTON)
-            await page.wait_for_timeout(2000)
+            clicked = await page.evaluate(
+                r"""() => {
+                  const btn = document.querySelector(
+                    '[role="dialog"] button.share-actions__primary-action,'
+                    + ' [role="dialog"] button.artdeco-button--primary'
+                  );
+                  if (!btn || btn.disabled) return false;
+                  btn.click();
+                  return true;
+                }"""
+            )
+            if not clicked:
+                raise SelectorError("Personal reshare Post button not clickable.")
+            await page.wait_for_timeout(3000)
             return {
                 "ok": True,
                 "detail": "Company post reshared on personal profile.",
