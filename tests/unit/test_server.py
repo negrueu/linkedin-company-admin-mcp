@@ -34,6 +34,14 @@ async def test_server_registers_all_tools() -> None:
         "company_schedule_post",
         "company_reply_comment",
         "company_reshare_post",
+        # company growth
+        "company_invite_to_follow",
+        "company_list_scheduled",
+        # personal -> company bridge
+        "personal_tag_company",
+        "personal_reshare_company_post",
+        "personal_comment_as_admin",
+        "personal_read_company_mentions",
     }
     missing = expected - names
     assert not missing, f"missing tools: {missing}"
