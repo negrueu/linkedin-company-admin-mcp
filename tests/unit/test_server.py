@@ -23,6 +23,10 @@ async def test_server_registers_all_tools() -> None:
         "company_list_mentions",
         "company_manage_admins",
         "company_analytics",
+        # company admin write
+        "company_edit_about",
+        "company_edit_logo",
+        "company_update_details",
     }
     missing = expected - names
     assert not missing, f"missing tools: {missing}"

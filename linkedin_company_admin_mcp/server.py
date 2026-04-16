@@ -17,6 +17,7 @@ from fastmcp import FastMCP
 from linkedin_company_admin_mcp import __version__
 from linkedin_company_admin_mcp.config.schema import AppConfig
 from linkedin_company_admin_mcp.core.browser import BrowserManager
+from linkedin_company_admin_mcp.tools.company_admin import register_company_admin_tools
 from linkedin_company_admin_mcp.tools.company_read import register_company_read_tools
 from linkedin_company_admin_mcp.tools.session import register_session_tools
 
@@ -65,5 +66,6 @@ def create_mcp_server(config: AppConfig) -> FastMCP[None]:
 
     register_session_tools(mcp, config=config, get_browser=get_browser)
     register_company_read_tools(mcp, get_browser=get_browser)
+    register_company_admin_tools(mcp, get_browser=get_browser)
 
     return mcp
