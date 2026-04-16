@@ -12,6 +12,7 @@ from __future__ import annotations
 
 COMPANY_BASE = "https://www.linkedin.com/company/{company_id}"
 COMPANY_ADMIN_DASHBOARD = f"{COMPANY_BASE}/admin/dashboard/"
+COMPANY_ADMIN_EDIT_MODAL = f"{COMPANY_BASE}/admin/dashboard/?editPage=true"
 COMPANY_ADMIN_PAGE_POSTS = f"{COMPANY_BASE}/admin/page-posts/published/"
 COMPANY_ADMIN_ANALYTICS_UPDATES = f"{COMPANY_BASE}/admin/analytics/updates/"
 COMPANY_ADMIN_ANALYTICS_FOLLOWERS = f"{COMPANY_BASE}/admin/analytics/followers/"
@@ -21,15 +22,26 @@ COMPANY_ADMIN_MANAGE_ADMINS = f"{COMPANY_BASE}/admin/settings/manage-admins/"
 
 # ---------- Company dashboard & header ------------------------------------
 
-# last verified 2026-04-16
-DASHBOARD_PAGE_NAME = "h1"
-DASHBOARD_FOLLOWERS_LINK = 'a[href*="/followers/"]'
-DASHBOARD_TAGLINE_CANDIDATES = (
-    "p.org-top-card-summary__tagline",
-    ".org-top-card-summary__tagline",
-    '[data-test-id="org-tagline"]',
-)
+# last verified 2026-04-17
+DASHBOARD_PAGE_NAME = "h1.org-organizational-page-admin-navigation__title, h1"
+DASHBOARD_FOLLOWER_COUNT = "a.org-organizational-page-admin-navigation__follower-count"
+DASHBOARD_SLUG_LINK = 'a[href*="/company/"][href*="/posts"]'
 
+# Edit Page modal (opened via ?editPage=true) - every field is an input/textarea/select
+# with a stable #id. Nothing here relies on hashed classes.
+#
+# last verified 2026-04-17
+EDIT_MODAL_DIALOG = '[role="dialog"]'
+EDIT_FIELD_NAME = "#organization-name-field"
+EDIT_FIELD_PUBLIC_URL = "#organization-public-url-field"
+EDIT_FIELD_TAGLINE = "#organization-tagline-field"
+EDIT_FIELD_DESCRIPTION = "#organization-description-field"
+EDIT_FIELD_WEBSITE = "#organization-website-field"
+EDIT_FIELD_INDUSTRY = "#organization-industry-typeahead"
+EDIT_FIELD_SIZE = "#organization-size-select"
+EDIT_FIELD_TYPE = "#organization-type-select"
+EDIT_FIELD_PHONE = "#organization-phone-field"
+EDIT_FIELD_FOUNDED = "#organization-founded-on-input"
 
 # ---------- Published posts -----------------------------------------------
 
@@ -64,11 +76,25 @@ MENTION_LINK = "a[href]"
 
 # ---------- Admin list (manage-admins page) -------------------------------
 
-# last verified 2026-04-16
-ADMIN_TABLE_ROW = ".org-admin-roles-module__table-wrapper tbody tr"
-ADMIN_ROW_NAME = 'a[href*="/in/"]'
-ADMIN_ROW_ROLE = ".org-admin-roles-module__role"
-ADMIN_ROW_HEADLINE = ".entity-headline"
+# Each admin renders as a tr with class org-admin-roles-module__row.
+# Name + headline are inside an artdeco-entity-lockup. Role is p.label-20dp.
+#
+# last verified 2026-04-17
+ADMIN_TABLE_ROW = "tr.org-admin-roles-module__row, .org-admin-roles-module__row"
+ADMIN_ROW_NAME = ".artdeco-entity-lockup__title"
+ADMIN_ROW_HEADLINE = ".artdeco-entity-lockup__subtitle"
+ADMIN_ROW_PROFILE_LINK = 'a[href^="/in/"], a[href*="/in/"]'
+ADMIN_ROW_ROLE = "p.label-20dp, .org-admin-roles-module__role"
+
+
+# ---------- Analytics metric cards ----------------------------------------
+
+# last verified 2026-04-17
+ANALYTICS_CARD = (
+    ".member-analytics-addon-card__base-card, .artdeco-card.member-analytics-addon-card__base-card"
+)
+ANALYTICS_CAROUSEL_ITEM = ".member-analytics-addon-metrics-carousel-item"
+ANALYTICS_DATE_RANGE_BUTTON = 'button[aria-label^="Date range"]'
 
 
 # ---------- Generic ------------------------------------------------------
