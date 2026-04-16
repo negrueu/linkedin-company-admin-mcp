@@ -1,0 +1,82 @@
+{
+  "manifest_version": "0.1",
+  "name": "linkedin-company-admin-mcp",
+  "display_name": "LinkedIn Company Admin",
+  "version": "0.1.0",
+  "description": "MCP server for LinkedIn Company Page administration - read analytics, manage posts, edit page details, grow followers, plus personal->company bridge tools for employee advocacy.",
+  "long_description": "Exposes 24 MCP tools for the browser-first administration of a LinkedIn Company Page: read page/posts/followers/mentions/analytics, edit About/logo/details, publish/edit/delete/schedule posts, invite followers, list scheduled posts, and a small set of personal-profile bridge tools (tag the page, reshare, comment-as-admin, audit mentions) for employee-advocacy workflows. Complementary to stickerdaniel/linkedin-mcp-server.",
+  "author": {
+    "name": "Marian Negru",
+    "email": "office@ketu.ai",
+    "url": "https://github.com/negrueu"
+  },
+  "homepage": "https://github.com/negrueu/linkedin-company-admin-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/negrueu/linkedin-company-admin-mcp"
+  },
+  "license": "MIT",
+  "keywords": [
+    "linkedin",
+    "company-page",
+    "mcp",
+    "model-context-protocol",
+    "automation",
+    "claude"
+  ],
+  "server": {
+    "type": "python",
+    "entry_point": "linkedin_company_admin_mcp.cli:main",
+    "mcp_config": {
+      "command": "uvx",
+      "args": [
+        "linkedin-company-admin-mcp@latest"
+      ],
+      "env": {
+        "LINKEDIN_USER_DATA_DIR": "${HOME}/.linkedin-company-admin/profile"
+      }
+    }
+  },
+  "user_config": {
+    "user_data_dir": {
+      "type": "directory",
+      "title": "Browser profile directory",
+      "description": "Persistent Patchright profile used to keep you signed in. Chmod'd to 0o700 on first login.",
+      "default": "${HOME}/.linkedin-company-admin/profile",
+      "required": false
+    },
+    "transport": {
+      "type": "string",
+      "title": "MCP transport",
+      "description": "stdio (default) or http.",
+      "default": "stdio",
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "session_status", "description": "Is the persistent profile live and logged in?" },
+    { "name": "session_warmup", "description": "Pre-open the browser + /feed/ to reduce first-call latency." },
+    { "name": "session_logout", "description": "Close the browser and wipe the persistent profile directory." },
+    { "name": "company_read_page", "description": "Read page name, tagline, followers, about, industry, website." },
+    { "name": "company_list_posts", "description": "List recent posts with URN, text, reactions, and comment counts." },
+    { "name": "company_list_followers", "description": "List followers with headline + profile URL (admin only)." },
+    { "name": "company_list_mentions", "description": "List admin notifications for posts that mentioned the page." },
+    { "name": "company_manage_admins", "description": "List page admins and their roles." },
+    { "name": "company_analytics", "description": "Followers / posts metrics for a 7d, 28d or 90d window." },
+    { "name": "company_edit_about", "description": "Update the About section (with tagline fallback)." },
+    { "name": "company_edit_logo", "description": "Upload a new logo and optional banner image." },
+    { "name": "company_update_details", "description": "Update website, industry, size, and specialties." },
+    { "name": "company_create_post", "description": "Publish a text post with optional link or image." },
+    { "name": "company_edit_post", "description": "Replace the body of an existing post." },
+    { "name": "company_delete_post", "description": "Permanently delete a company post." },
+    { "name": "company_schedule_post", "description": "Publish a post at a future ISO-8601 datetime." },
+    { "name": "company_reply_comment", "description": "Reply as the page to a comment on one of your posts." },
+    { "name": "company_reshare_post", "description": "Reshare another post on the page with optional commentary." },
+    { "name": "company_invite_to_follow", "description": "Send follow invitations to 1st-degree connections." },
+    { "name": "company_list_scheduled", "description": "List posts queued for future publication." },
+    { "name": "personal_tag_company", "description": "Publish a personal post that @-mentions the company page." },
+    { "name": "personal_reshare_company_post", "description": "Reshare a company post on your personal profile." },
+    { "name": "personal_comment_as_admin", "description": "Comment on a company post as the page or as yourself." },
+    { "name": "personal_read_company_mentions", "description": "List your personal posts that tag the given company page." }
+  ]
+}

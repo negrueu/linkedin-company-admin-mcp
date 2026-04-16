@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
+# ---- Builder ----------------------------------------------------------------
 FROM python:3.13-slim-bookworm AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -7,7 +8,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
 
 WORKDIR /app
 
@@ -17,7 +18,13 @@ COPY linkedin_company_admin_mcp/ ./linkedin_company_admin_mcp/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev || uv sync --no-dev
 
+# ---- Runtime ----------------------------------------------------------------
 FROM python:3.13-slim-bookworm AS runtime
+
+LABEL org.opencontainers.image.title="linkedin-company-admin-mcp" \
+      org.opencontainers.image.description="MCP server for LinkedIn Company Page administration" \
+      org.opencontainers.image.source="https://github.com/negrueu/linkedin-company-admin-mcp" \
+      org.opencontainers.image.licenses="MIT"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -44,7 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --shell /bin/bash mcp
+RUN useradd --create-home --shell /bin/bash --uid 1000 mcp
 WORKDIR /app
 
 COPY --from=builder --chown=mcp:mcp /app /app
@@ -54,5 +61,7 @@ USER mcp
 RUN python -m patchright install chromium --with-deps || python -m patchright install chromium
 
 ENV LINKEDIN_USER_DATA_DIR=/home/mcp/.linkedin-company-admin/profile
+
+VOLUME ["/home/mcp/.linkedin-company-admin"]
 
 ENTRYPOINT ["linkedin-company-admin-mcp"]
