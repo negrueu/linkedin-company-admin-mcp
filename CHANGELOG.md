@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (2026-04-17)
+
+- Reworked company admin + content providers for LinkedIn's 2026-04 UI
+  after a live end-to-end pass on KETU AI SRL (id 106949933):
+  - `company_read_page` now reads the `?editPage=true` modal form fields.
+  - `company_edit_post` / `company_delete_post` navigate to the post-detail
+    URL `/feed/update/<urn>/` and use `li.option-edit-share` /
+    `li.option-delete` - the control menu is no longer exposed on
+    `/admin/page-posts/published/`.
+  - `company_schedule_post` drives the two-step Schedule post -> date/time
+    -> Next -> Schedule flow in the browser's local timezone; respects
+    LinkedIn's 15-minute quantised time slots.
+  - `company_list_scheduled` reads the share-box management dialog (no
+    standalone URL) and gained an optional `cancel_index` parameter.
+  - `company_reshare_post` switches the composer actor from the default
+    personal identity to the company page before posting.
+  - `company_edit_about` / `company_update_details` use the Details tab
+    of the Edit Page modal, type via the keyboard so Ember's dirty-state
+    flag flips, and surface server-side validation errors so a missing
+    required field no longer silently no-ops a save.
+  - Bridge tools: personal composer trigger updated for the
+    `div[role="button"]` wrapping (not `<button>`); editor selector
+    scoped to `div.artdeco-modal` so the always-present video.js hidden
+    dialogs do not match.
+- Python runtime pinned to 3.12 via `.python-version` so the cp314
+  native greenlet binary does not trip Windows Smart App Control.
+
 ### Added
 
 - Project bootstrap: `pyproject.toml`, ruff, mypy, pytest, GitHub Actions CI.

@@ -4,6 +4,38 @@ Full argument lists, return shapes, and end-to-end examples for every tool expos
 
 Every write tool is wrapped in a sliding-window rate limiter (see `core/rate_limit.py`). The `max_per_hour` column is the hard cap applied by this server - LinkedIn's own quotas sit on top.
 
+## Validation status (2026-04-17)
+
+Every tool below was exercised end-to-end against a live Company Page (`KETU AI SRL`, id `106949933`) with the 2026-04 admin UI. The right-hand column is our confidence level.
+
+| Tool | Validated | Notes |
+|---|---|---|
+| `session_status`, `session_warmup`, `session_logout` | ✅ | Smoke-tested. |
+| `company_read_page` | ✅ | Reads structured form fields from the `?editPage=true` modal. |
+| `company_list_posts` | ✅ | Reads `[data-urn^=urn:li:activity]` from `/admin/page-posts/published/`. |
+| `company_list_followers` | ✅ | Returns first page of admin followers. |
+| `company_list_mentions` | ✅ | Admin notifications tab. |
+| `company_manage_admins` | ✅ | Reads `tr.org-admin-roles-module__row`. |
+| `company_analytics` | ✅ | Carousel cards on `/admin/analytics/updates/`. |
+| `company_edit_about` | ✅ | **Precondition**: page must have a valid Website URL (LinkedIn server validates all required fields on save). |
+| `company_update_details` | ✅ | Website set + restored. Industry uses ArrowDown+Enter to accept typeahead. |
+| `company_edit_logo` | ⚠ requires local image file | Selectors verified; not exercised against a file upload in this harness. |
+| `company_create_post` | ✅ | Full create + delete round trip. |
+| `company_edit_post` | ✅ | Full round trip via post-detail URL + `li.option-edit-share`. |
+| `company_delete_post` | ✅ | Full round trip via post-detail URL + `li.option-delete`. |
+| `company_schedule_post` | ✅ | Scheduled + listed + cancelled in one run. |
+| `company_list_scheduled` | ✅ | Reads share-box management dialog, optional cancel by index. |
+| `company_reshare_post` | ✅ | Verified actor switch to the company before posting. |
+| `company_reply_comment` | ⚠ requires existing comment | Flow intact; a comment must exist on the post for the reply target to resolve. |
+| `company_invite_to_follow` | ⚠ monthly quota | Selectors verified; not clicked live to preserve the 250/month cap. |
+| `personal_tag_company` | ⚠ depends on feed composer availability | Selectors updated for 2026-04 feed UI. Some company-admin-only sessions have the personal composer hidden. |
+| `personal_reshare_company_post` | ⚠ depends on feed composer availability | Same caveat as above. |
+| `personal_comment_as_admin` | ⚠ requires a post with an existing comment and the actor-switcher in the comment editor | Flow wired; not smoke-testable without a seeded comment. |
+| `personal_read_company_mentions` | ✅ | Reads from `/in/me/recent-activity/all/`. |
+
+Legend: ✅ = round-trip tested live. ⚠ = wired and reviewed but requires a precondition (asset, quota, or existing state) not available in a one-shot smoke test.
+
+
 Legend for the **Rate** column:
 - `-` means read-only; not rate-limited.
 - `N/h` means up to N successful invocations per hour.
