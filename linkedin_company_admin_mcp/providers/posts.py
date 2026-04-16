@@ -298,6 +298,18 @@ class BrowserPostsProvider(PostsProvider):
     # --- schedule --------------------------------------------------------
 
     async def schedule_post(self, request: SchedulePostRequest) -> ProviderResult:
+        """Schedule a company post for a future date/time.
+
+        Flow (validated 2026-04-17 against KETU AI):
+            1. Open composer, write body, trigger dirty state.
+            2. Click ``button.share-actions__scheduled-post-btn``
+               (aria-label "Schedule post") to open the schedule dialog.
+            3. Fill ``input#share-post__scheduled-date`` (mm/dd/yyyy,
+               US format - must be converted from the caller's ISO date)
+               and ``input#share-post__scheduled-time`` (e.g. "10:30 AM").
+            4. Click "Next" to advance to the review step.
+            5. Click "Schedule" on the review step to commit.
+        """
         if "T" not in request.scheduled_at_iso:
             raise ValueError("scheduled_at_iso must be ISO 8601 with date and time.")
         cid = normalise_company_id(request.company_id)
@@ -305,21 +317,72 @@ class BrowserPostsProvider(PostsProvider):
         await _open_company_composer(page, cid)
         await quill_insert_text(page, _COMPOSER_EDITOR, request.text)
         await dirty_state_trigger(page, _COMPOSER_EDITOR)
+        await page.wait_for_timeout(400)
 
-        clicked = await js_click_by_text(page, "body", "Schedule")
-        if not clicked:
-            raise SelectorError("'Schedule' option not found on composer.")
-        await page.wait_for_timeout(800)
+        opened = await page.evaluate(
+            r"""() => {
+              const btn = document.querySelector(
+                '[role="dialog"] button.share-actions__scheduled-post-btn,'
+                + ' [role="dialog"] button[aria-label="Schedule post"]'
+              );
+              if (!btn) return false;
+              btn.click();
+              return true;
+            }"""
+        )
+        if not opened:
+            raise SelectorError("'Schedule post' button not found on composer.")
+        await page.wait_for_selector("#share-post__scheduled-date", timeout=10_000)
 
-        date_part, time_part = request.scheduled_at_iso.split("T", 1)
-        await page.fill(_COMPOSER_SCHEDULE_DATE, date_part)
-        await page.fill(_COMPOSER_SCHEDULE_TIME, time_part[:5])
-        await dirty_state_trigger(page, _COMPOSER_SCHEDULE_TIME)
+        date_iso, time_iso = request.scheduled_at_iso.split("T", 1)
+        year, month, day = date_iso.split("-")
+        us_date = f"{int(month):02d}/{int(day):02d}/{year}"
+        hh, mm = time_iso[:5].split(":")
+        hour_24 = int(hh)
+        ampm = "AM" if hour_24 < 12 else "PM"
+        hour_12 = hour_24 % 12 or 12
+        us_time = f"{hour_12}:{mm} {ampm}"
 
-        submitted = await js_click_by_text(page, '[role="dialog"]', "Schedule")
-        if not submitted:
-            raise SelectorError("Schedule confirm button not clickable.")
-        await page.wait_for_timeout(2000)
+        await page.fill("#share-post__scheduled-date", us_date)
+        await page.keyboard.press("Tab")
+        await page.fill("#share-post__scheduled-time", us_time)
+        await page.keyboard.press("Tab")
+        await page.wait_for_timeout(400)
+
+        next_clicked = await page.evaluate(
+            r"""() => {
+              const dlgs = Array.from(document.querySelectorAll('[role="dialog"]'));
+              const dlg = dlgs[dlgs.length - 1];
+              if (!dlg) return false;
+              const btn = Array.from(dlg.querySelectorAll('button')).find(b =>
+                /^next$/i.test((b.textContent || '').trim()) && !b.disabled
+              );
+              if (!btn) return false;
+              btn.click();
+              return true;
+            }"""
+        )
+        if not next_clicked:
+            raise SelectorError("Schedule dialog 'Next' button not clickable - invalid date/time?")
+        await page.wait_for_timeout(1200)
+
+        confirmed = await page.evaluate(
+            r"""() => {
+              const dlgs = Array.from(document.querySelectorAll('[role="dialog"]'));
+              const dlg = dlgs[dlgs.length - 1];
+              if (!dlg) return false;
+              const btn = Array.from(dlg.querySelectorAll('button')).find(b => {
+                const t = (b.textContent || '').trim().toLowerCase();
+                return t === 'schedule' && !b.disabled;
+              });
+              if (!btn) return false;
+              btn.click();
+              return true;
+            }"""
+        )
+        if not confirmed:
+            raise SelectorError("Schedule review 'Schedule' button not clickable.")
+        await page.wait_for_timeout(2500)
         return ProviderResult(
             ok=True, detail="Post scheduled.", extra={"at": request.scheduled_at_iso}
         )

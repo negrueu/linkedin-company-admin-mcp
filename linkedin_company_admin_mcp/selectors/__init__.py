@@ -20,6 +20,14 @@ COMPANY_ADMIN_FOLLOWERS = f"{COMPANY_BASE}/admin/analytics/followers/"
 COMPANY_ADMIN_NOTIFICATIONS = f"{COMPANY_BASE}/admin/notifications/all/"
 COMPANY_ADMIN_MANAGE_ADMINS = f"{COMPANY_BASE}/admin/settings/manage-admins/"
 
+# The scheduled-posts list for a company is not a standalone URL; it renders
+# as a dialog on top of /admin/page-posts/published/ when the query string
+# ?share=true&view=management&actorCompanyId=<id> is supplied.
+# last verified 2026-04-17
+COMPANY_ADMIN_SCHEDULED_LIST = (
+    f"{COMPANY_BASE}/admin?share=true&view=management&actorCompanyId={{company_id}}"
+)
+
 # ---------- Company dashboard & header ------------------------------------
 
 # last verified 2026-04-17
