@@ -1,0 +1,19 @@
+services:
+  linkedin-company-admin-mcp:
+    build: .
+    image: linkedin-company-admin-mcp:latest
+    container_name: linkedin-company-admin-mcp
+    environment:
+      LINKEDIN_TRANSPORT: streamable-http
+      LINKEDIN_HOST: 0.0.0.0
+      LINKEDIN_PORT: "8765"
+      LINKEDIN_HEADLESS: "1"
+      LINKEDIN_LOG_LEVEL: INFO
+    ports:
+      - "8765:8765"
+    volumes:
+      - linkedin-profile:/home/mcp/.linkedin-company-admin/profile
+    restart: unless-stopped
+
+volumes:
+  linkedin-profile:

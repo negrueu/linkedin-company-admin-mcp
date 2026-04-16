@@ -1,0 +1,133 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "linkedin-company-admin-mcp"
+version = "0.1.0"
+description = "MCP server for LinkedIn Company Page administration - read analytics, manage posts, edit page details, grow followers. Includes personal->company bridge tools for employee advocacy."
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+license = "MIT"
+authors = [
+    { name = "Marian Negru", email = "office@ketu.ai" },
+]
+keywords = ["linkedin", "mcp", "model-context-protocol", "company-page", "automation", "claude"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastmcp>=3.0.0",
+    "patchright>=1.40.0",
+    "python-dotenv>=1.1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=5.0.0",
+    "pytest-xdist>=3.6.0",
+    "ruff>=0.11.11",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/negrueu/linkedin-company-admin-mcp"
+Repository = "https://github.com/negrueu/linkedin-company-admin-mcp"
+Issues = "https://github.com/negrueu/linkedin-company-admin-mcp/issues"
+Changelog = "https://github.com/negrueu/linkedin-company-admin-mcp/blob/main/CHANGELOG.md"
+
+[project.scripts]
+linkedin-company-admin-mcp = "linkedin_company_admin_mcp.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["linkedin_company_admin_mcp*"]
+
+[tool.setuptools.package-data]
+linkedin_company_admin_mcp = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "ARG",  # flake8-unused-arguments
+    "SIM",  # flake8-simplify
+    "ASYNC",
+    "RUF",
+]
+ignore = [
+    "E501",  # line-too-long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ARG", "S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+packages = ["linkedin_company_admin_mcp"]
+
+[[tool.mypy.overrides]]
+module = "patchright.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --strict-markers -ra"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: requires Patchright + live LinkedIn session (LINKEDIN_TEST_ENABLED=1)",
+    "e2e: end-to-end smoke tests (local only)",
+]
+
+[tool.coverage.run]
+source = ["linkedin_company_admin_mcp"]
+omit = [
+    "linkedin_company_admin_mcp/__main__.py",
+    "linkedin_company_admin_mcp/cli.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

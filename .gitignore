@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# uv
+# (uv.lock IS committed, .python-version too)
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+
+# Type checking
+.mypy_cache/
+.ruff_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Credentials - NEVER commit
+.env
+.env.*
+!.env.example
+
+# Browser profile - contains LinkedIn session cookies
+# Users store this in ~/.linkedin-company-admin/profile (outside repo)
+# But if anyone runs locally with a repo-relative profile, exclude it:
+profile/
+data/
+*.cookies.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
