@@ -24,7 +24,7 @@ async def main() -> None:
         page = await browser.get_page()
         print("[1/3] open composer + compose")
         await _open_personal_composer(page)
-        editor = "div.artdeco-modal .ql-editor[role=\"textbox\"], div.artdeco-modal div.ql-editor"
+        editor = 'div.artdeco-modal .ql-editor[role="textbox"], div.artdeco-modal div.ql-editor'
         await quill_insert_text(page, editor, lead + " ")
         await _insert_company_mention(page, "KETU AI SRL")
         await quill_insert_text(page, editor, " is our company page.")
@@ -63,7 +63,9 @@ async def main() -> None:
         print(f"      personal URN: {urn}")
         if urn:
             print("[3/3] delete via personal update URL")
-            encoded = urllib.parse.quote(urn.replace("urn:li:activity:", "urn:li:activity:"), safe="")
+            encoded = urllib.parse.quote(
+                urn.replace("urn:li:activity:", "urn:li:activity:"), safe=""
+            )
             await page.goto(
                 f"https://www.linkedin.com/feed/update/{encoded}/",
                 wait_until="domcontentloaded",
