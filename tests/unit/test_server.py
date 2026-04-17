@@ -50,3 +50,22 @@ async def test_server_registers_all_tools() -> None:
 async def test_server_has_expected_name_and_version() -> None:
     mcp = create_mcp_server(AppConfig())
     assert mcp.name == "linkedin-company-admin-mcp"
+
+
+def test_create_mcp_server_warns_on_stale_selectors(caplog, monkeypatch) -> None:
+    import logging
+    from datetime import date
+
+    import linkedin_company_admin_mcp.server as srv
+    from linkedin_company_admin_mcp.selectors.staleness import SelectorEntry
+
+    monkeypatch.setattr(
+        srv,
+        "_collect_selector_entries",
+        lambda: [SelectorEntry("X", date(2020, 1, 1))],
+    )
+    caplog.set_level(logging.WARNING, logger="linkedin_company_admin_mcp.server")
+
+    srv.create_mcp_server(AppConfig())
+
+    assert any("stale selector" in r.message.lower() for r in caplog.records)

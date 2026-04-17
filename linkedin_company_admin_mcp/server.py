@@ -11,12 +11,18 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastmcp import FastMCP
 
 from linkedin_company_admin_mcp import __version__
 from linkedin_company_admin_mcp.config.schema import AppConfig
 from linkedin_company_admin_mcp.core.browser import BrowserManager
+from linkedin_company_admin_mcp.selectors.staleness import (
+    SelectorEntry,
+    find_stale,
+    parse_selectors_file,
+)
 from linkedin_company_admin_mcp.tools.bridge_personal import register_bridge_personal_tools
 from linkedin_company_admin_mcp.tools.company_admin import register_company_admin_tools
 from linkedin_company_admin_mcp.tools.company_content import register_company_content_tools
@@ -26,7 +32,14 @@ from linkedin_company_admin_mcp.tools.session import register_session_tools
 
 _log = logging.getLogger(__name__)
 
+_SELECTORS_PATH = Path(__file__).parent / "selectors" / "__init__.py"
+_STALE_THRESHOLD_DAYS = 60
+
 _browser_singleton: BrowserManager | None = None
+
+
+def _collect_selector_entries() -> list[SelectorEntry]:
+    return parse_selectors_file(_SELECTORS_PATH)
 
 
 def get_browser() -> BrowserManager:
@@ -46,6 +59,17 @@ def create_mcp_server(config: AppConfig) -> FastMCP[None]:
     """Build a FastMCP server configured against ``config``."""
     global _browser_singleton
     _browser_singleton = BrowserManager(config.browser)
+
+    stale = find_stale(_collect_selector_entries(), max_age_days=_STALE_THRESHOLD_DAYS)
+    if stale:
+        names = ", ".join(e.name for e in stale[:5])
+        more = "" if len(stale) <= 5 else f" (+{len(stale) - 5} more)"
+        _log.warning(
+            "stale selector(s) detected (>%d days since last verification): %s%s",
+            _STALE_THRESHOLD_DAYS,
+            names,
+            more,
+        )
 
     if config.browser.rate_limit_persist:
         from linkedin_company_admin_mcp.core.rate_limit import configure_persistent_store
