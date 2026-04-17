@@ -1,5 +1,7 @@
 # linkedin-company-admin-mcp
 
+> **Language:** English - [Romana](docs/README.ro.md)
+
 [![PyPI](https://img.shields.io/pypi/v/linkedin-company-admin-mcp.svg)](https://pypi.org/project/linkedin-company-admin-mcp/)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -168,7 +170,7 @@ Contributions welcome. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for loca
 
 ## Status
 
-Under active development. See [CHANGELOG.md](CHANGELOG.md) for version history and [issues](https://github.com/negrueu/linkedin-company-admin-mcp/issues) for the roadmap. The public release is not yet on PyPI - install from source until then.
+Under active development. See [CHANGELOG.md](CHANGELOG.md) for version history and [issues](https://github.com/negrueu/linkedin-company-admin-mcp/issues) for the roadmap.
 
 ## License
 
