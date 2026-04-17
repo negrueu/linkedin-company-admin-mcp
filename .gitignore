@@ -56,6 +56,8 @@ tests/**/*.html
 tests/**/*.har
 tests/**/*.png
 tests/**/*.mhtml
+# Exception: hand-written synthetic fixtures are safe to commit (no PII).
+!tests/fixtures/synthetic/*.html
 
 # OS
 .DS_Store
