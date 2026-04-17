@@ -1,0 +1,7 @@
+# GitHub Linguist overrides.
+# HTML/HAR/MHTML in tests/ are captured browser snapshots, not source code.
+# Exclude them from language stats so the repo is correctly classified as Python.
+tests/**/*.html       linguist-vendored
+tests/**/*.har        linguist-vendored
+tests/**/*.mhtml      linguist-vendored
+docs/**/*.html        linguist-documentation

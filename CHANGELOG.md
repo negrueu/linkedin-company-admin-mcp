@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security (2026-04-17)
+
+- **History rewrite.** Removed captured HTML fixtures
+  (`tests/integration/fixtures/sample_html/`, 16 files, ~15 MB) from the
+  entire git history using `git filter-repo`. The snapshots had been
+  captured from a live LinkedIn Company Page admin session and contained
+  PII (admin names, follower profiles, analytics). Existing clones should
+  be discarded and re-cloned. The `v0.1.0` tag was re-pointed to the
+  equivalent commit on the rewritten branch; the PyPI `0.1.0` wheel and
+  sdist never contained fixtures and are unaffected.
+- `.gitignore` and `.gitattributes` added so future captured HTML cannot
+  be committed by accident and is excluded from GitHub language stats.
+
 ## [0.1.0] - 2026-04-17
 
 First public release on PyPI. End-to-end validated 2026-04-17 on a live

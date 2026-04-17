@@ -49,6 +49,14 @@ profile/
 data/
 *.cookies.json
 
+# E2E fixtures - captured from live LinkedIn admin pages, contain PII.
+# Keep them locally under tests/integration/fixtures/ but NEVER commit.
+tests/integration/fixtures/
+tests/**/*.html
+tests/**/*.har
+tests/**/*.png
+tests/**/*.mhtml
+
 # OS
 .DS_Store
 Thumbs.db
