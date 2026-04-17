@@ -7,6 +7,8 @@ import asyncio
 import logging
 import sys
 from dataclasses import asdict
+from datetime import date
+from pathlib import Path
 
 from linkedin_company_admin_mcp import __version__
 from linkedin_company_admin_mcp.config.loaders import load_config
@@ -16,8 +18,19 @@ from linkedin_company_admin_mcp.core.exceptions import (
     ConfigurationError,
 )
 from linkedin_company_admin_mcp.logging_config import configure_logging
+from linkedin_company_admin_mcp.selectors.staleness import (
+    SelectorEntry,
+    find_stale,
+    parse_selectors_file,
+)
 
 _log = logging.getLogger(__name__)
+
+_SELECTORS_PATH = Path(__file__).parent / "selectors" / "__init__.py"
+
+
+def _collect_selector_entries() -> list[SelectorEntry]:
+    return parse_selectors_file(_SELECTORS_PATH)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,6 +63,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="On any tool error, save HTML + PNG snapshot next to the profile "
         "directory so failures can be reported with reproducible evidence.",
     )
+    parser.add_argument(
+        "--check-selectors",
+        action="store_true",
+        help="Report any selector whose last-verified date is older than "
+        "--max-age-days and exit with code 3. CI-friendly, no browser required.",
+    )
+    parser.add_argument(
+        "--max-age-days",
+        type=int,
+        default=60,
+        help="Threshold for --check-selectors (default: 60).",
+    )
     return parser
 
 
@@ -57,6 +82,24 @@ def main(argv: list[str] | None = None) -> int:
     """Entry point. Returns a process exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.check_selectors:
+        entries = _collect_selector_entries()
+        stale = find_stale(entries, max_age_days=args.max_age_days, today=date.today())
+        if not stale:
+            print(
+                f"all selectors fresh (threshold {args.max_age_days} days, "
+                f"{len(entries)} entries)"
+            )
+            return 0
+        print(f"stale selectors (threshold {args.max_age_days} days):")
+        for e in stale:
+            age = (date.today() - e.last_verified).days
+            print(
+                f"  {e.name}: last verified {e.last_verified.isoformat()} "
+                f"({age} days ago)"
+            )
+        return 3
 
     try:
         config = load_config(args=args)
