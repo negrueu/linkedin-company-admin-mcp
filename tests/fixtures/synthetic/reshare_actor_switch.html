@@ -1,0 +1,27 @@
+<!-- Synthetic fixture: composer with actor switcher (share as: personal | company).
+     No PII. last captured 2026-04-17 -->
+<!DOCTYPE html>
+<html>
+<body>
+  <div class="share-box-v2__modal" role="dialog" aria-label="Create a post">
+    <button class="share-unified-settings-entry-button" aria-label="Share settings">
+      Post settings
+    </button>
+    <!-- Revealed after click on above -->
+    <div role="dialog" aria-label="Post settings">
+      <div>
+        <input type="radio" name="actor" value="personal" id="actor-personal" />
+        <label for="actor-personal">Post as Example Person</label>
+      </div>
+      <div>
+        <input type="radio" name="actor" value="company" id="actor-company" />
+        <label for="actor-company">Post as Example Company</label>
+      </div>
+      <button>Save</button>
+    </div>
+    <!-- Composer body -->
+    <div role="textbox" contenteditable="true" aria-label="Text editor"></div>
+    <button aria-label="Done">Post</button>
+  </div>
+</body>
+</html>

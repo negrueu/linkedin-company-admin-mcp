@@ -1,0 +1,25 @@
+<!-- Synthetic fixture: Edit Page modal with Details tab active.
+     No PII. last captured 2026-04-17 -->
+<!DOCTYPE html>
+<html>
+<body>
+  <div role="dialog" aria-label="Edit page">
+    <!-- Tab bar -->
+    <ul role="tablist">
+      <li role="tab" aria-selected="false">Page info</li>
+      <li role="tab" aria-selected="true">Details</li>
+    </ul>
+    <!-- Details pane -->
+    <form>
+      <input id="organization-name-field" />
+      <textarea id="organization-description-field"></textarea>
+      <input id="organization-website-field" />
+      <input id="organization-public-url-field" />
+      <input id="organization-tagline-field" />
+      <button type="submit">Save</button>
+    </form>
+    <!-- Toast surface (error target) -->
+    <div aria-live="polite" role="status"></div>
+  </div>
+</body>
+</html>
