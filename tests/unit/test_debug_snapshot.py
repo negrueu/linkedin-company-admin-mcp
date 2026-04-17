@@ -41,7 +41,5 @@ async def test_capture_snapshot_scrubs_bad_label() -> None:
     page.screenshot = AsyncMock()
 
     with tempfile.TemporaryDirectory() as d:
-        paths = await capture_snapshot(
-            page, snapshot_dir=Path(d), label="../../etc/passwd"
-        )
+        paths = await capture_snapshot(page, snapshot_dir=Path(d), label="../../etc/passwd")
         assert paths.html.resolve().parent == Path(d).resolve()

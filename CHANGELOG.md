@@ -7,18 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Security (2026-04-17)
+## [0.2.0] - 2026-04-17
 
-- **History rewrite.** Removed captured HTML fixtures
-  (`tests/integration/fixtures/sample_html/`, 16 files, ~15 MB) from the
-  entire git history using `git filter-repo`. The snapshots had been
-  captured from a live LinkedIn Company Page admin session and contained
-  PII (admin names, follower profiles, analytics). Existing clones should
-  be discarded and re-cloned. The `v0.1.0` tag was re-pointed to the
-  equivalent commit on the rewritten branch; the PyPI `0.1.0` wheel and
-  sdist never contained fixtures and are unaffected.
-- `.gitignore` and `.gitattributes` added so future captured HTML cannot
-  be committed by accident and is excluded from GitHub language stats.
+### Added
+
+- `--debug-snapshot` CLI flag and `LINKEDIN_DEBUG_SNAPSHOT` env var: when any tool error occurs, the package writes an `<tool>_<timestamp>.html` + `.png` pair next to the profile directory, so bug reports can be reproduced from evidence.
+- `SelectorError` now carries `selector_name`, `last_verified` and `url` keyword-only fields; user-visible messages end with a hint to re-run with `--debug-snapshot`.
+- `--check-selectors` CLI subcommand: exits 3 when any entry in the selector registry is older than `--max-age-days` (default 60). CI-friendly, no browser required.
+- Startup warning logged by `create_mcp_server()` when stale selectors are present.
+- Opt-in persistent rate limiting via `LINKEDIN_RATE_LIMIT_PERSIST=1`. State is stored in `<profile-parent>/rate-limits.db` (sqlite) and survives restarts.
+- `selector-canary` GitHub Actions workflow (weekly cron). `staleness-audit` job always runs; optional `live-probe` job is gated behind `SELECTOR_CANARY_ENABLED` repo variable + `LINKEDIN_PROFILE_B64` secret because running Patchright from data-center IPs carries account detection risk.
+- Romanian README translation in [docs/README.ro.md](docs/README.ro.md), linked from the English README.
+- Synthetic HTML fixtures under `tests/fixtures/synthetic/` (handwritten, no PII, safe to commit) and `test_selectors_resolve.py` assertions proving the registered selectors still map onto the DOM structures we last captured for delete/edit/schedule/reshare/edit-about flows.
+
+### Changed
+
+- `delete_post` now raises an enriched `SelectorError` with `selector_name="OPTION_DELETE_LI"` and `last_verified="2026-04-17"`.
+
+### Security
+
+- No behavioural change vs v0.1.0. Session cookies remain sensitive and must not be synced to cloud storage; this is now called out explicitly in README, README.ro, and TROUBLESHOOTING.
+
+## [0.1.0.post1] - 2026-04-17
+
+### Security
+
+- **History rewrite.** Removed captured HTML fixtures (`tests/integration/fixtures/sample_html/`, 16 files, ~15 MB) from the entire git history using `git filter-repo`. The snapshots had been captured from a live LinkedIn Company Page admin session and contained PII (admin names, follower profiles, analytics). Existing clones should be discarded and re-cloned. The `v0.1.0` tag was re-pointed to the equivalent commit on the rewritten branch; the PyPI `0.1.0` wheel and sdist never contained fixtures and are unaffected.
+- `.gitignore` and `.gitattributes` added so future captured HTML cannot be committed by accident and is excluded from GitHub language stats.
 
 ## [0.1.0] - 2026-04-17
 

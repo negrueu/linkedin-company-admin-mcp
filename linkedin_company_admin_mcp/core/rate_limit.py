@@ -62,10 +62,10 @@ class _Bucket:
 
 
 _buckets: dict[str, _Bucket] = {}
-_persistent_store: "SqliteRateLimitStore | None" = None
+_persistent_store: SqliteRateLimitStore | None = None
 
 
-def configure_persistent_store(store: "SqliteRateLimitStore | None") -> None:
+def configure_persistent_store(store: SqliteRateLimitStore | None) -> None:
     """Opt-in: enable cross-process persistence.
 
     Pass ``None`` to disable.

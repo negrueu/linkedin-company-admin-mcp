@@ -56,6 +56,4 @@ def test_bad_path_surfaces_configuration_error(tmp_path: Path) -> None:
     from linkedin_company_admin_mcp.core.exceptions import ConfigurationError
 
     with pytest.raises(ConfigurationError):
-        SqliteRateLimitStore(
-            tmp_path / "missing_dir" / "nested" / "rl.db", create_parents=False
-        )
+        SqliteRateLimitStore(tmp_path / "missing_dir" / "nested" / "rl.db", create_parents=False)

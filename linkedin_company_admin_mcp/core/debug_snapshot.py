@@ -42,7 +42,7 @@ def _safe_label(label: str) -> str:
 
 
 async def capture_snapshot(
-    page: "Page",
+    page: Page,
     *,
     snapshot_dir: Path,
     label: str,
@@ -68,7 +68,5 @@ async def capture_snapshot(
     except Exception:
         _log.exception("failed to capture PNG screenshot")
 
-    _log.warning(
-        "debug snapshot saved: %s (url=%s)", stem, getattr(page, "url", "?")
-    )
+    _log.warning("debug snapshot saved: %s (url=%s)", stem, getattr(page, "url", "?"))
     return SnapshotPaths(html=html_path, png=png_path)

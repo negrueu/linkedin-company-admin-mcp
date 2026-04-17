@@ -88,17 +88,13 @@ def main(argv: list[str] | None = None) -> int:
         stale = find_stale(entries, max_age_days=args.max_age_days, today=date.today())
         if not stale:
             print(
-                f"all selectors fresh (threshold {args.max_age_days} days, "
-                f"{len(entries)} entries)"
+                f"all selectors fresh (threshold {args.max_age_days} days, {len(entries)} entries)"
             )
             return 0
         print(f"stale selectors (threshold {args.max_age_days} days):")
         for e in stale:
             age = (date.today() - e.last_verified).days
-            print(
-                f"  {e.name}: last verified {e.last_verified.isoformat()} "
-                f"({age} days ago)"
-            )
+            print(f"  {e.name}: last verified {e.last_verified.isoformat()} ({age} days ago)")
         return 3
 
     try:

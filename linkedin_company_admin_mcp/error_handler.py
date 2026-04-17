@@ -41,7 +41,7 @@ async def raise_tool_error_with_snapshot(
     exc: BaseException,
     *,
     tool_name: str,
-    page: "Page | None",
+    page: Page | None,
     snapshot_dir: Path,
     enabled: bool,
 ) -> NoReturn:
@@ -54,6 +54,6 @@ async def raise_tool_error_with_snapshot(
     if enabled and page is not None:
         try:
             await capture_snapshot(page, snapshot_dir=snapshot_dir, label=tool_name)
-        except Exception:  # noqa: BLE001
+        except Exception:
             _log.exception("snapshot capture itself failed; continuing with original error")
     raise_tool_error(exc, tool_name)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linkedin-company-admin-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP server for LinkedIn Company Page administration - read analytics, manage posts, edit page details, grow followers. Includes personal->company bridge tools for employee advocacy."
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
@@ -80,10 +80,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ARG", "S101"]
+"tests/**" = ["ARG", "S101", "ASYNC240"]
 # FastMCP injects `ctx: Context` based on type; it is not always referenced
 # inside the body but must remain in the signature so the client can observe progress.
 "linkedin_company_admin_mcp/tools/*.py" = ["ARG001"]
+# debug_snapshot is best-effort on error paths; sync pathlib is fine,
+# failures fall through to the except blocks.
+"linkedin_company_admin_mcp/core/debug_snapshot.py" = ["ASYNC240"]
 
 [tool.ruff.format]
 quote-style = "double"

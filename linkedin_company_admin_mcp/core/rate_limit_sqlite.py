@@ -40,9 +40,7 @@ class SqliteRateLimitStore:
         elif not path.parent.exists():
             raise ConfigurationError(f"rate limit db parent missing: {path.parent}")
         try:
-            self._conn = sqlite3.connect(
-                str(path), isolation_level=None, check_same_thread=False
-            )
+            self._conn = sqlite3.connect(str(path), isolation_level=None, check_same_thread=False)
         except sqlite3.Error as e:
             raise ConfigurationError(f"cannot open rate limit db {path}: {e}") from e
         self._conn.executescript(self._SCHEMA)
@@ -50,9 +48,7 @@ class SqliteRateLimitStore:
 
     def record(self, key: str, ts: float) -> None:
         with self._lock:
-            self._conn.execute(
-                "INSERT INTO rate_events(key, ts) VALUES(?, ?)", (key, ts)
-            )
+            self._conn.execute("INSERT INTO rate_events(key, ts) VALUES(?, ?)", (key, ts))
 
     def count_since(self, key: str, cutoff: float) -> int:
         with self._lock:
