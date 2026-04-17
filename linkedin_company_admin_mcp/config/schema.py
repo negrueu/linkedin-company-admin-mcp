@@ -24,6 +24,8 @@ class BrowserConfig:
     viewport_width: int = 1280
     viewport_height: int = 720
     slow_mo_ms: int = 0
+    debug_snapshot: bool = False
+    rate_limit_persist: bool = False
 
     def validate(self) -> None:
         if self.viewport_width < 320 or self.viewport_height < 240:
@@ -75,3 +77,5 @@ class EnvironmentKeys:
     USER_DATA_DIR = "LINKEDIN_USER_DATA_DIR"
     LOG_LEVEL = "LINKEDIN_LOG_LEVEL"
     TOOL_TIMEOUT = "LINKEDIN_TOOL_TIMEOUT"
+    DEBUG_SNAPSHOT = "LINKEDIN_DEBUG_SNAPSHOT"
+    RATE_LIMIT_PERSIST = "LINKEDIN_RATE_LIMIT_PERSIST"

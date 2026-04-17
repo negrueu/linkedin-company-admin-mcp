@@ -33,3 +33,13 @@ def test_invalid_server_port_raises() -> None:
 def test_invalid_tool_timeout_raises() -> None:
     with pytest.raises(ConfigurationError, match="tool_timeout_seconds"):
         ServerConfig(tool_timeout_seconds=0).validate()
+
+
+def test_browser_config_has_debug_snapshot_default() -> None:
+    cfg = BrowserConfig()
+    assert cfg.debug_snapshot is False
+
+
+def test_browser_config_has_rate_limit_persist_default() -> None:
+    cfg = BrowserConfig()
+    assert cfg.rate_limit_persist is False

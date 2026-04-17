@@ -67,6 +67,10 @@ def load_config(
         browser.headless = _parse_bool(raw)
     if raw := source.get(E.USER_DATA_DIR):
         browser.user_data_dir = Path(raw).expanduser().resolve()
+    if raw := source.get(E.DEBUG_SNAPSHOT):
+        browser.debug_snapshot = _parse_bool(raw)
+    if raw := source.get(E.RATE_LIMIT_PERSIST):
+        browser.rate_limit_persist = _parse_bool(raw)
 
     if raw := source.get(E.TRANSPORT):
         _validate_choice(raw, get_args(Transport), E.TRANSPORT)

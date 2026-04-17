@@ -44,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="MCP transport. Default (from env or 'stdio') used for Claude Desktop.",
     )
+    parser.add_argument(
+        "--debug-snapshot",
+        action="store_true",
+        help="On any tool error, save HTML + PNG snapshot next to the profile "
+        "directory so failures can be reported with reproducible evidence.",
+    )
     return parser
 
 
@@ -57,6 +63,9 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigurationError as e:
         print(f"configuration error: {e}", file=sys.stderr)
         return 2
+
+    if args.debug_snapshot:
+        config.browser.debug_snapshot = True
 
     configure_logging(config.server.log_level)
 
