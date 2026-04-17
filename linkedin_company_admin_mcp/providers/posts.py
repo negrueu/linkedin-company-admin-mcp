@@ -289,7 +289,10 @@ class BrowserPostsProvider(PostsProvider):
         if not result.get("ok"):
             raise SelectorError(
                 f"Delete flow stopped at phase {result.get('phase')!r}. "
-                "LinkedIn UI may have changed - re-introspect /feed/update/<urn>/."
+                "LinkedIn UI may have changed - re-introspect /feed/update/<urn>/.",
+                selector_name="OPTION_DELETE_LI",
+                last_verified="2026-04-17",
+                url=page.url,
             )
         await page.wait_for_timeout(1500)
         return ProviderResult(ok=True, detail="Post deleted.", extra={"urn": request.post_urn})
