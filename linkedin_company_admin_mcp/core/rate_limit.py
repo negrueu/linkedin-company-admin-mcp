@@ -12,9 +12,12 @@ import time
 from collections import deque
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import ParamSpec, TypeVar
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from linkedin_company_admin_mcp.core.exceptions import RateLimitError
+
+if TYPE_CHECKING:  # pragma: no cover
+    from linkedin_company_admin_mcp.core.rate_limit_sqlite import SqliteRateLimitStore
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -35,6 +38,17 @@ class _Bucket:
         async with self._lock:
             now = time.monotonic()
             cutoff = now - self.window_seconds
+
+            if _persistent_store is not None:
+                persistent_count = _persistent_store.count_since(key, cutoff)
+                if persistent_count >= self.max_calls:
+                    raise RateLimitError(
+                        f"rate limit hit for {key!r}: "
+                        f"max {self.max_calls}/{self.window_seconds:.0f}s "
+                        f"(persistent count={persistent_count})"
+                    )
+                _persistent_store.record(key, now)
+
             while self._calls and self._calls[0] < cutoff:
                 self._calls.popleft()
             if len(self._calls) >= self.max_calls:
@@ -48,6 +62,16 @@ class _Bucket:
 
 
 _buckets: dict[str, _Bucket] = {}
+_persistent_store: "SqliteRateLimitStore | None" = None
+
+
+def configure_persistent_store(store: "SqliteRateLimitStore | None") -> None:
+    """Opt-in: enable cross-process persistence.
+
+    Pass ``None`` to disable.
+    """
+    global _persistent_store
+    _persistent_store = store
 
 
 def rate_limited(

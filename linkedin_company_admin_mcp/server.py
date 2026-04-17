@@ -47,6 +47,14 @@ def create_mcp_server(config: AppConfig) -> FastMCP[None]:
     global _browser_singleton
     _browser_singleton = BrowserManager(config.browser)
 
+    if config.browser.rate_limit_persist:
+        from linkedin_company_admin_mcp.core.rate_limit import configure_persistent_store
+        from linkedin_company_admin_mcp.core.rate_limit_sqlite import SqliteRateLimitStore
+
+        db_path = config.browser.user_data_dir.parent / "rate-limits.db"
+        configure_persistent_store(SqliteRateLimitStore(db_path))
+        _log.info("persistent rate limiting enabled at %s", db_path)
+
     @asynccontextmanager
     async def lifespan(_server: FastMCP[None]) -> AsyncIterator[None]:
         try:

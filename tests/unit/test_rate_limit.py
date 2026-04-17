@@ -51,3 +51,27 @@ async def test_separate_keys_have_separate_buckets() -> None:
     assert await b() == "b"
     with pytest.raises(RateLimitError):
         await a()
+
+
+async def test_persistent_mode_survives_bucket_reset(tmp_path) -> None:
+    """When a store is configured, the count persists across bucket resets."""
+    from linkedin_company_admin_mcp.core.rate_limit import configure_persistent_store
+    from linkedin_company_admin_mcp.core.rate_limit_sqlite import SqliteRateLimitStore
+
+    store = SqliteRateLimitStore(tmp_path / "rl.db")
+    configure_persistent_store(store)
+
+    @rate_limited(key="test_persist", max_per_hour=2)
+    async def op() -> None:
+        pass
+
+    await op()
+    await op()
+
+    reset_buckets_for_tests()
+    configure_persistent_store(store)
+
+    with pytest.raises(RateLimitError):
+        await op()
+
+    configure_persistent_store(None)
