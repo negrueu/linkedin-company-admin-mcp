@@ -123,3 +123,44 @@ linkedin-company-admin-mcp --login    # start over
 ```
 
 If a bug remains after a clean reset, open an [issue](https://github.com/negrueu/linkedin-company-admin-mcp/issues) with the exact CLI command you ran, the tool call, and the error (with email / company names redacted).
+
+## Debug snapshots
+
+When a tool fails with `SelectorError` the message now contains the exact selector name, the date it was last verified and the page URL. Example:
+
+```
+SelectorError: could not find delete option on post page |
+selector=OPTION_DELETE_LI |
+last_verified=2026-04-17 |
+url=https://www.linkedin.com/feed/update/urn:li:activity:123/ |
+hint: run with --debug-snapshot to capture HTML+PNG
+```
+
+Re-run the server or CLI with `--debug-snapshot` (or set `LINKEDIN_DEBUG_SNAPSHOT=1` in your environment). On the next failure the package writes `<tool>_<timestamp>.html` and `.png` next to your profile directory:
+
+```
+~/.linkedin-company-admin/debug-snapshots/company_delete_post_20260417_153012.html
+~/.linkedin-company-admin/debug-snapshots/company_delete_post_20260417_153012.png
+```
+
+Attach both files when opening a selector-drift issue.
+
+## Selector staleness check
+
+The package now tracks a `# last verified YYYY-MM-DD` comment next to every selector constant. To audit freshness without running a browser:
+
+```bash
+linkedin-company-admin-mcp --check-selectors --max-age-days 60
+```
+
+Exit code `3` means at least one selector is older than the threshold. The server itself also logs a warning at startup when stale entries are found.
+
+## Persistent rate limiting
+
+The default rate limiter is in-process. For users running the MCP from multiple clients or restarting Claude Desktop often, enable persistent state:
+
+```bash
+LINKEDIN_RATE_LIMIT_PERSIST=1 linkedin-company-admin-mcp
+```
+
+A sqlite file appears at `~/.linkedin-company-admin/rate-limits.db`. The limits defined by `@rate_limited` now survive restarts.
