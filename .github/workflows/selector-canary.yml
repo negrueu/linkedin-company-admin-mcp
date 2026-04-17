@@ -1,0 +1,78 @@
+name: selector-canary
+
+on:
+  schedule:
+    # Mondays 06:00 UTC = weekend drift check.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: selector-canary
+  cancel-in-progress: true
+
+jobs:
+  staleness-audit:
+    # Fast no-browser audit of "# last verified" comments. Always runs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pipx install uv
+
+      - name: Install deps
+        run: uv sync --extra dev
+
+      - name: Run --check-selectors
+        run: uv run python -m linkedin_company_admin_mcp --check-selectors --max-age-days 60
+
+  live-probe:
+    # Optional real-browser read. Gated behind repo variable because running
+    # Patchright against a live LinkedIn session from a data-center IP is a
+    # detection risk. Maintainers opt-in by setting:
+    #   - repo variable SELECTOR_CANARY_ENABLED=true
+    #   - repo variable LINKEDIN_CANARY_COMPANY_ID=<numeric id>
+    #   - repo secret LINKEDIN_PROFILE_B64 (tar+gz+base64 of the profile dir)
+    if: vars.SELECTOR_CANARY_ENABLED == 'true'
+    needs: staleness-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pipx install uv
+
+      - name: Install deps
+        run: uv sync --extra dev
+
+      - name: Restore browser profile from secret
+        env:
+          PROFILE_B64: ${{ secrets.LINKEDIN_PROFILE_B64 }}
+        run: |
+          if [ -z "$PROFILE_B64" ]; then
+            echo "::error::SELECTOR_CANARY_ENABLED is true but LINKEDIN_PROFILE_B64 secret is missing."
+            exit 2
+          fi
+          mkdir -p ~/.linkedin-company-admin
+          echo "$PROFILE_B64" | base64 -d | tar -xzf - -C ~/.linkedin-company-admin/
+          chmod -R 700 ~/.linkedin-company-admin
+
+      - name: Install Patchright browsers
+        run: uv run patchright install chromium --with-deps
+
+      - name: Smoke session status
+        env:
+          LINKEDIN_HEADLESS: "true"
+        run: uv run python -c "import asyncio; from linkedin_company_admin_mcp.config.loaders import load_config; from linkedin_company_admin_mcp.core.browser import BrowserManager; c=load_config(args=None); b=BrowserManager(c.browser); asyncio.run(b.start())"

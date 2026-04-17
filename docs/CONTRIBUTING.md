@@ -70,3 +70,18 @@ For bug fixes include a `Root cause:` line in the body explaining what actually 
 - Keep PRs focused. One feature / one fix per PR.
 - Update `CHANGELOG.md` under `[Unreleased]`.
 - Ensure CI is green (lint + type + tests).
+
+## Selector drift canary (maintainers only)
+
+Weekly GitHub Actions job `selector-canary` has two parts. The first part (`staleness-audit`) always runs and calls `--check-selectors --max-age-days 60`; if any entry is stale, the job exits non-zero and GitHub emails the repo admin.
+
+The second part (`live-probe`) opens a real browser against LinkedIn with a stored session. It is **disabled by default** because running Patchright from a data-center IP carries account detection risk. To enable:
+
+1. Set repo variable `SELECTOR_CANARY_ENABLED=true`.
+2. Set repo variable `LINKEDIN_CANARY_COMPANY_ID=<numeric id>` for a page the session is already admin on.
+3. Create a dedicated LinkedIn account (do NOT use your main one) and log it in locally with `--login`.
+4. Tar + gzip + base64 the profile and store it as secret `LINKEDIN_PROFILE_B64`:
+   `tar -czf - -C ~/.linkedin-company-admin profile | base64 -w0`
+5. Manually trigger `selector-canary` from the Actions tab.
+
+Accept that the canary account may eventually get restricted. Rotate the secret after every local re-login.
