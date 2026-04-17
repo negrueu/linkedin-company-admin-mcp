@@ -20,7 +20,35 @@ class AuthenticationError(LinkedInMCPError):
 
 
 class SelectorError(LinkedInMCPError):
-    """A DOM selector returned no match, meaning LinkedIn likely drifted."""
+    """A DOM selector returned no match, meaning LinkedIn likely drifted.
+
+    When raised by provider code pass ``selector_name`` (constant name in
+    ``selectors/__init__.py``), ``last_verified`` (the date comment), and
+    the offending ``url``. The user-visible message then includes the hint
+    to re-run with ``--debug-snapshot`` and the exact selector to update.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        selector_name: str | None = None,
+        last_verified: str | None = None,
+        url: str | None = None,
+    ) -> None:
+        parts = [message]
+        if selector_name:
+            parts.append(f"selector={selector_name}")
+        if last_verified:
+            parts.append(f"last_verified={last_verified}")
+        if url:
+            parts.append(f"url={url}")
+        if any([selector_name, last_verified, url]):
+            parts.append("hint: run with --debug-snapshot to capture HTML+PNG")
+        super().__init__(" | ".join(parts))
+        self.selector_name = selector_name
+        self.last_verified = last_verified
+        self.url = url
 
 
 class RateLimitError(LinkedInMCPError):
