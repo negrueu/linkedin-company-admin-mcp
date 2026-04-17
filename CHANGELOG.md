@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-04-17
+
+First public release on PyPI. End-to-end validated 2026-04-17 on a live
+LinkedIn Company Page (KETU AI SRL, id 106949933). 13 tools confirmed
+✅ and 8 tools ⚠ with explicit preconditions documented in
+[docs/TOOL_REFERENCE.md](docs/TOOL_REFERENCE.md).
+
 ### Changed (2026-04-17)
 
 - Reworked company admin + content providers for LinkedIn's 2026-04 UI

@@ -9,6 +9,10 @@
 
 > **Complementary to [stickerdaniel/linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server).** Stickerdaniel's project covers personal LinkedIn use cases (feed, messaging, search). This project fills the gap nobody else fills: **full administrative control of your LinkedIn Company Page**, plus a small set of personal-profile bridge tools used exclusively for employee-advocacy flows.
 
+> ⚠️ **Terms of Service & account risk.** LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) prohibits automated access to the platform. This server drives a real browser session on your behalf and LinkedIn may detect, rate-limit, or permanently restrict accounts that use it - including loss of access to the Company Page itself. **Use at your own risk.** Do not use this on a personal or business account you cannot afford to lose. There is no way for the authors to recover a restricted account for you. Prefer LinkedIn's [Community Management API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/) if you qualify for it.
+
+> 🔐 **Security note - session dir equals credentials.** "No credentials stored" means this server never asks for your password and never puts one in a config file. It does **not** mean the profile directory is safe to share. After login, `~/.linkedin-company-admin/profile` contains LinkedIn session cookies that are functionally equivalent to your password + 2FA combined. Anyone who reads that directory gets full admin access to your account and Company Page. In particular: **do not sync this directory to OneDrive / iCloud / Dropbox / any cloud backup.** Keep it on local disk only, on a machine you trust.
+
 ## Why this project
 
 LinkedIn's official Community Management API is invite-only. Scraping personal profiles is already well covered. What was missing: a stable, browser-first MCP that lets a page admin (or their assistant LLM) read analytics, draft posts, edit the about section, invite followers, and tag the page from a personal post - without any of it touching a stored password.
